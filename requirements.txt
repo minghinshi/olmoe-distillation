@@ -1,0 +1,5 @@
+# Draft
+bitsandbytes
+python-dotenv
+torchinfo
+transformers[torch]

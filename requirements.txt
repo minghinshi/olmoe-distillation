@@ -1,5 +1,7 @@
 # Draft
 bitsandbytes
+datasets
+peft
 python-dotenv
 torchinfo
 transformers[torch]

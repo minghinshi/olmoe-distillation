@@ -1,6 +1,5 @@
 # LoRA vs. QLoRA comparison:
 # https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/model-garden/lora-qlora
-# Our extracted 575M model can easily fit in memory, so we'll use LoRA.
 
 # %% Setup
 from itertools import chain
@@ -17,6 +16,12 @@ from transformers import (
 )
 
 import utils
+
+# Number of tokens in each fine-tuning sample
+SEQ_LEN = 2048
+
+# Knowledge distillation temperature
+T = 2.0
 
 # %% Load the teacher
 teacher = utils.load_quantized_moe()
@@ -57,23 +62,16 @@ student = get_peft_model(student, peft_config)
 # Confirm trainable params is small
 student.print_trainable_parameters()
 
-# %% Load the dataset
+# %% Load and preprocess the dataset
 dataset = load_dataset("allenai/c4", "en", streaming=True, split="train")
-next(iter(dataset))
+dataset = dataset.map(lambda x: tokenizer(x["text"]), batched=True)
 
-# %% Tokenize the dataset
-tokenized = dataset.map(lambda x: tokenizer(x["text"]), batched=True)
-next(iter(tokenized))
 
-# %% Concatenate and chunk tokens
 # For each batch of text, join all tokens into one big list
 # and split it into chunks of 2048 tokens
-CHUNK_SIZE = 2048
-
-
 def chunker(examples: dict[str, list]) -> dict[str, list]:
-    chunked_ids: list[list[int]] = [[0] * CHUNK_SIZE]
-    chunked_mask: list[list[int]] = [[0] * CHUNK_SIZE]
+    chunked_ids: list[list[int]] = [[0] * SEQ_LEN]
+    chunked_mask: list[list[int]] = [[0] * SEQ_LEN]
     token_idx = 0
 
     input_ids = chain.from_iterable(examples["input_ids"])
@@ -87,9 +85,9 @@ def chunker(examples: dict[str, list]) -> dict[str, list]:
         token_idx += 1
 
         # When chunk is full, add a new one
-        if token_idx == CHUNK_SIZE:
-            chunked_ids.append([0] * CHUNK_SIZE)
-            chunked_mask.append([0] * CHUNK_SIZE)
+        if token_idx == SEQ_LEN:
+            chunked_ids.append([0] * SEQ_LEN)
+            chunked_mask.append([0] * SEQ_LEN)
             token_idx = 0
 
     # Drop the non-full chunk
@@ -98,12 +96,11 @@ def chunker(examples: dict[str, list]) -> dict[str, list]:
     return {"input_ids": chunked_ids, "attention_mask": chunked_mask}
 
 
-chunked = tokenized.map(
+dataset = dataset.map(
     chunker,
     batched=True,
     remove_columns=["text", "timestamp", "url"],
 )
-next(iter(chunked))
 
 # %% Create a data collator
 data_collator = DataCollatorForLanguageModeling(tokenizer, mlm=False)
@@ -125,7 +122,6 @@ class DistillationTrainer(Trainer):
 
         # Compute loss (KL divergence)
         # Use temperature > 1 for better performance
-        T = 2.0
         student_logprobs = F.log_softmax(student_logits / T, dim=-1)
         teacher_logprobs = F.log_softmax(teacher_logits / T, dim=-1)
         vocab_size = student_logprobs.shape[-1]
@@ -143,15 +139,15 @@ class DistillationTrainer(Trainer):
 # https://unsloth.ai/docs/get-started/fine-tuning-llms-guide/lora-hyperparameters-guide
 training_args = TrainingArguments(
     output_dir="./models/distilled_model",
-    per_device_train_batch_size=1,
+    per_device_train_batch_size=2,
     num_train_epochs=1,
-    max_steps=30,
+    max_steps=500,
     learning_rate=2e-4,
     gradient_accumulation_steps=8,
     # Requires Ampere or newer GPUs
     bf16=True,
     gradient_checkpointing=True,
-    logging_steps=3,
+    logging_steps=4,
 )
 
 trainer = DistillationTrainer(
@@ -159,7 +155,7 @@ trainer = DistillationTrainer(
     model=student,
     args=training_args,
     data_collator=data_collator,
-    train_dataset=chunked,
+    train_dataset=dataset,
 )
 
 # %% Time to train!

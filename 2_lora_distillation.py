@@ -23,6 +23,9 @@ SEQ_LEN = 2048
 # Knowledge distillation temperature
 T = 2.0
 
+# %% Load your Hugging Face token
+utils.load_and_check_env()
+
 # %% Load the teacher
 teacher = utils.load_quantized_moe()
 print(teacher)
@@ -160,3 +163,12 @@ trainer = DistillationTrainer(
 
 # %% Time to train!
 trainer.train()
+
+# Observations:
+
+# The initial training loss is around 100.
+# If we print the loss in `compute_loss`, we get around 10-15.
+# `vocab_size` is about 50000 and ln(50000) is about 10.8,
+# so the dense model is at first performing no better than random.
+
+# Extracting expert 0 or averaging expert weights gave similar initial loss.

@@ -1,5 +1,8 @@
+import os
+
 import torch as t
 import torch.nn.functional as F
+from dotenv import load_dotenv
 from torch import nn
 from transformers import (
     AutoModelForCausalLM,
@@ -17,7 +20,7 @@ DENSE_MODEL_PATH = "./models/dense_model"
 
 class OlmoeQuantizableMoeBlock(nn.Module):
     """
-    Implements OLMoE's MoE block using a ModuleList, so that it can be quantized.
+    Implements OLMoE's MoE block using a `ModuleList`, so that it can be quantized.
     """
 
     def __init__(self, config: OlmoeConfig):
@@ -105,14 +108,32 @@ def load_quantized_moe() -> OlmoeForCausalLM:
     clear_patch_mapping()
     return model  # type: ignore
 
+
 def load_dense_model():
+    """
+    Loads a dense model produced by extracting an expert from the MoE.
+    """
     # Monkey-patch the MoE block with a dense MLP
-    register_patch_mapping(mapping={"OlmoeSparseMoeBlock": OlmoeMLP})
+    register_patch_mapping(
+        mapping={
+            "OlmoeSparseMoeBlock": OlmoeMLP,
+        }
+    )
 
     model = AutoModelForCausalLM.from_pretrained(
-        DENSE_MODEL_PATH, 
+        DENSE_MODEL_PATH,
         device_map="auto",
     )
 
     clear_patch_mapping()
     return model
+
+
+def load_and_check_env():
+    """
+    Loads environment variables and raise if you do not have all required variables.
+
+    Required variables: `HF_TOKEN`
+    """
+    load_dotenv()
+    assert os.getenv("HF_TOKEN"), "Please set HF_TOKEN in your .env file"

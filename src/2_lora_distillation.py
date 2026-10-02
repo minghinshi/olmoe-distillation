@@ -141,7 +141,7 @@ class DistillationTrainer(Trainer):
 
 # https://unsloth.ai/docs/get-started/fine-tuning-llms-guide/lora-hyperparameters-guide
 training_args = TrainingArguments(
-    output_dir="./models/distilled_model",
+    output_dir="../models/distilled_model",
     per_device_train_batch_size=2,
     num_train_epochs=1,
     max_steps=500,

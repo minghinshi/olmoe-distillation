@@ -106,5 +106,5 @@ torchinfo.summary(
 )
 
 # %% Save the model for the next file
-model.save_pretrained("./models/dense_model")
-tokenizer.save_pretrained("./models/dense_model")
+model.save_pretrained(utils.DENSE_MODEL_PATH)
+tokenizer.save_pretrained(utils.DENSE_MODEL_PATH)

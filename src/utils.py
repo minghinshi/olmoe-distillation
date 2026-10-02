@@ -15,7 +15,7 @@ from transformers.models.olmoe.modeling_olmoe import OlmoeMLP, OlmoeTopKRouter
 from transformers.monkey_patching import clear_patch_mapping, register_patch_mapping
 
 MODEL_NAME = "allenai/OLMoE-1B-7B-0924-Instruct"
-DENSE_MODEL_PATH = "./models/dense_model"
+DENSE_MODEL_PATH = "../models/dense_model"
 
 
 class OlmoeQuantizableMoeBlock(nn.Module):

@@ -1,0 +1,11 @@
+[project]
+name = "expert-extraction"
+version = "0.1.0"
+dependencies = [
+    "bitsandbytes",
+    "datasets",
+    "peft",
+    "python-dotenv",
+    "torchinfo",
+    "transformers[torch]"
+]

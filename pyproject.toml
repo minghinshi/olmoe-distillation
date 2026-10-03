@@ -4,8 +4,14 @@ version = "0.1.0"
 dependencies = [
     "bitsandbytes",
     "datasets",
+    "ipykernel",
+    "ipywidgets",
+    "onnx",
+    "onnxscript",
     "peft",
     "python-dotenv",
+    "torch",
     "torchinfo",
+    "torchvision",
     "transformers[torch]"
 ]

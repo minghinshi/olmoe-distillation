@@ -54,6 +54,8 @@ filelock==4.0.9
     #   datasets
     #   huggingface-hub
     #   torch
+flatbuffers==25.12.19
+    # via onnxruntime
 frozenlist==1.8.0
     # via
     #   aiohttp
@@ -143,6 +145,7 @@ numpy==2.5.3
     #   ml-dtypes
     #   onnx
     #   onnx-ir
+    #   onnxruntime
     #   onnxscript
     #   pandas
     #   peft
@@ -196,6 +199,8 @@ onnx==1.23.1
     #   onnxscript
 onnx-ir==1.0.0
     # via onnxscript
+onnxruntime==1.30.0
+    # via expert-extraction (pyproject.toml)
 onnxscript==0.7.2
     # via expert-extraction (pyproject.toml)
 packaging==26.3
@@ -205,6 +210,7 @@ packaging==26.3
     #   datasets
     #   huggingface-hub
     #   ipykernel
+    #   onnxruntime
     #   onnxscript
     #   peft
     #   transformers
@@ -227,7 +233,9 @@ propcache==0.5.4
     #   aiohttp
     #   yarl
 protobuf==7.36.2
-    # via onnx
+    # via
+    #   onnx
+    #   onnxruntime
 psutil==7.2.2
     # via
     #   accelerate

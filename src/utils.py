@@ -3,19 +3,23 @@ import os
 import torch as t
 import torch.nn.functional as F
 from dotenv import load_dotenv
+from peft import AutoPeftModelForCausalLM, PeftModelForCausalLM
 from torch import nn
 from transformers import (
     AutoModelForCausalLM,
+    AutoTokenizer,
     BitsAndBytesConfig,
     OlmoeConfig,
     OlmoeForCausalLM,
 )
 from transformers.conversion_mapping import register_checkpoint_conversion_mapping
+from transformers.models.gpt_neox.tokenization_gpt_neox import GPTNeoXTokenizer
 from transformers.models.olmoe.modeling_olmoe import OlmoeMLP, OlmoeTopKRouter
 from transformers.monkey_patching import clear_patch_mapping, register_patch_mapping
 
 MODEL_NAME = "allenai/OLMoE-1B-7B-0924-Instruct"
 DENSE_MODEL_PATH = "../models/dense_model"
+DISTILLED_MODEL_PATH = "../models/distilled_model/checkpoint-4000"
 
 
 class OlmoeQuantizableMoeBlock(nn.Module):
@@ -127,6 +131,33 @@ def load_dense_model():
 
     clear_patch_mapping()
     return model
+
+
+def load_distilled_model() -> PeftModelForCausalLM:
+    """
+    Loads the distilled model as a PEFT model.
+    """
+    # Monkey-patch the MoE block with a dense MLP
+    register_patch_mapping(
+        mapping={
+            "OlmoeSparseMoeBlock": OlmoeMLP,
+        }
+    )
+
+    model = AutoPeftModelForCausalLM.from_pretrained(
+        DISTILLED_MODEL_PATH,
+        device_map="auto",
+    )
+
+    clear_patch_mapping()
+    return model
+
+
+def load_tokenizer() -> GPTNeoXTokenizer:
+    """
+    Loads OLMoE's tokenizer.
+    """
+    return AutoTokenizer.from_pretrained(MODEL_NAME)
 
 
 def load_and_check_env():

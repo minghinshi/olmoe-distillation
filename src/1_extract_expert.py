@@ -3,7 +3,7 @@ import torch as t
 import torchinfo
 from datasets import load_dataset
 from torch import nn
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM
 from transformers.models.olmoe.modeling_olmoe import OlmoeMLP
 
 import utils
@@ -15,7 +15,7 @@ utils.load_and_check_env()
 model = AutoModelForCausalLM.from_pretrained(utils.MODEL_NAME, device_map="auto")
 
 # %% Test drive the model
-tokenizer = AutoTokenizer.from_pretrained(utils.MODEL_NAME)
+tokenizer = utils.load_tokenizer()
 messages = [{"role": "user", "content": "Who are you?"}]
 
 inputs = tokenizer.apply_chat_template(

@@ -40,7 +40,7 @@ student = utils.load_dense_model()
 print(student)
 
 # %% Load the tokenizer
-tokenizer = AutoTokenizer.from_pretrained(utils.MODEL_NAME)
+tokenizer = utils.load_tokenizer()
 
 # %% Set up low-rank adaptation (LoRA)
 # https://huggingface.co/docs/peft/quicktour

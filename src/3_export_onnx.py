@@ -1,5 +1,6 @@
 # %% Setup
 import onnxruntime as ort
+import torch as t
 from transformers import OlmoeForCausalLM
 from transformers.exporters.configs import OnnxConfig
 from transformers.exporters.exporter_onnx import OnnxExporter
@@ -22,6 +23,10 @@ merged_model.eval()
 
 # ONNX might work better on CPU
 merged_model.to("cpu")  # type: ignore
+
+# The CPU execution provider doesn't support `bfloat16` for the operation `Mul(14)`.
+# We need to convert the model to `float32`, but this doubles the size of the model.
+merged_model.to(t.float32)  # type: ignore
 
 # %% Use Hugging Face to save the model as ONNX
 # https://huggingface.co/docs/transformers/exporters

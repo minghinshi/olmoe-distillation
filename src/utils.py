@@ -8,6 +8,7 @@ from torch import nn
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
+    BatchEncoding,
     BitsAndBytesConfig,
     OlmoeConfig,
     OlmoeForCausalLM,
@@ -75,6 +76,19 @@ class OlmoeQuantizableMoeBlock(nn.Module):
         return final_states
 
 
+def load_olmoe() -> OlmoeForCausalLM:
+    """
+    Loads OLMoE and returns it unchanged.
+    """
+    model = AutoModelForCausalLM.from_pretrained(
+        MODEL_NAME,
+        device_map="auto",
+    )
+
+    assert isinstance(model, OlmoeForCausalLM)
+    return model
+
+
 def load_quantized_moe() -> OlmoeForCausalLM:
     """
     Loads OLMoE, replaces its expert modules with a version using `ModuleList`, and quantizes it in 4-bit.
@@ -110,10 +124,11 @@ def load_quantized_moe() -> OlmoeForCausalLM:
 
     # Clean up
     clear_patch_mapping()
-    return model  # type: ignore
+    assert isinstance(model, OlmoeForCausalLM)
+    return model 
 
 
-def load_dense_model():
+def load_dense_model() -> OlmoeForCausalLM:
     """
     Loads a dense model produced by extracting an expert from the MoE.
     """
@@ -130,6 +145,7 @@ def load_dense_model():
     )
 
     clear_patch_mapping()
+    assert isinstance(model, OlmoeForCausalLM)
     return model
 
 
@@ -168,3 +184,29 @@ def load_and_check_env():
     """
     load_dotenv()
     assert os.getenv("HF_TOKEN"), "Please set HF_TOKEN in your .env file"
+
+
+def test_drive(model, tokenizer):
+    """
+    Sends an LLM "Who are you?" and prints its response.
+    """
+    messages = [
+        {
+            "role": "user",
+            "content": "Who are you?",
+        }
+    ]
+
+    inputs = tokenizer.apply_chat_template(
+        messages,
+        add_generation_prompt=True,
+        tokenize=True,
+        return_dict=True,
+        return_tensors="pt",
+    )
+
+    assert isinstance(inputs, BatchEncoding)
+    inputs = inputs.to(model.device)
+
+    outputs = model.generate(**inputs, max_new_tokens=40)  # type: ignore
+    print(tokenizer.decode(outputs[0][inputs["input_ids"].shape[-1] :]))

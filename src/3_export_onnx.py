@@ -28,11 +28,12 @@ merged_model.to("cpu")  # type: ignore
 # We need to convert the model to `float32`, but this doubles the size of the model.
 merged_model.to(t.float32)  # type: ignore
 
-# %% Use Hugging Face to save the model as ONNX
-# https://huggingface.co/docs/transformers/exporters
+# %% Prepare example input
 tokenizer = utils.load_tokenizer()
 inputs = tokenizer("Hello, world!", return_tensors="pt")
 
+# %% Use Hugging Face to save the model as ONNX
+# https://huggingface.co/docs/transformers/exporters
 exporter = OnnxExporter()
 config = OnnxConfig(dynamic=True)
 onnx_program = exporter.export(merged_model, inputs, config=config)
@@ -44,3 +45,7 @@ onnx_program.save(ONNX_MODEL_PATH)
 session = ort.InferenceSession(ONNX_MODEL_PATH)
 ort_inputs = {k: v.numpy() for k, v in inputs.items()}
 outputs = session.run(None, ort_inputs)
+
+onnx_logits = t.tensor(outputs[0])
+pytorch_logits = merged_model(**inputs).logits
+assert t.allclose(onnx_logits, pytorch_logits, atol=1e-4)

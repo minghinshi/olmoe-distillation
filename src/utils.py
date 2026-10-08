@@ -18,6 +18,8 @@ from transformers.models.gpt_neox.tokenization_gpt_neox import GPTNeoXTokenizer
 from transformers.models.olmoe.modeling_olmoe import OlmoeMLP, OlmoeTopKRouter
 from transformers.monkey_patching import clear_patch_mapping, register_patch_mapping
 
+from dense_model import DenseOlmoeForCausalLM
+
 MODEL_NAME = "allenai/OLMoE-1B-7B-0924-Instruct"
 DENSE_MODEL_PATH = "../models/dense_model"
 DISTILLED_MODEL_PATH = "../models/distilled_model/checkpoint-4000"
@@ -80,13 +82,10 @@ def load_olmoe() -> OlmoeForCausalLM:
     """
     Loads OLMoE and returns it unchanged.
     """
-    model = AutoModelForCausalLM.from_pretrained(
+    return OlmoeForCausalLM.from_pretrained(
         MODEL_NAME,
-        device_map="auto",
+        device_map="cpu",
     )
-
-    assert isinstance(model, OlmoeForCausalLM)
-    return model
 
 
 def load_quantized_moe() -> OlmoeForCausalLM:
@@ -125,28 +124,26 @@ def load_quantized_moe() -> OlmoeForCausalLM:
     # Clean up
     clear_patch_mapping()
     assert isinstance(model, OlmoeForCausalLM)
-    return model 
+    return model
+
+
+def load_dense_model_incomplete() -> DenseOlmoeForCausalLM:
+    """
+    Loads a dense model with attention weights from OLMoE but MLP weights not set.
+
+    Note: This will generate a warning from `transformers` that can be safely ignored.
+    """
+    return DenseOlmoeForCausalLM.from_pretrained(MODEL_NAME)
 
 
 def load_dense_model() -> OlmoeForCausalLM:
     """
     Loads a dense model produced by extracting an expert from the MoE.
     """
-    # Monkey-patch the MoE block with a dense MLP
-    register_patch_mapping(
-        mapping={
-            "OlmoeSparseMoeBlock": OlmoeMLP,
-        }
-    )
-
-    model = AutoModelForCausalLM.from_pretrained(
+    return DenseOlmoeForCausalLM.from_pretrained(
         DENSE_MODEL_PATH,
-        device_map="auto",
+        device_map="cuda",
     )
-
-    clear_patch_mapping()
-    assert isinstance(model, OlmoeForCausalLM)
-    return model
 
 
 def load_distilled_model() -> PeftModelForCausalLM:

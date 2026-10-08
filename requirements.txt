@@ -6,7 +6,7 @@ accelerate==1.15.0
     #   transformers
 aiohappyeyeballs==2.7.1
     # via aiohttp
-aiohttp==3.14.3
+aiohttp==3.14.4
     # via fsspec
 aiosignal==1.4.0
     # via aiohttp
@@ -24,9 +24,6 @@ certifi==2026.7.22
     # via
     #   httpcore
     #   httpx
-    #   requests
-charset-normalizer==3.5.2
-    # via requests
 click==8.5.0
     # via huggingface-hub
 comm==0.2.3
@@ -39,9 +36,9 @@ cuda-pathfinder==1.8.3
     # via cuda-bindings
 cuda-toolkit==13.0.3.0
     # via torch
-datasets==5.0.1
+datasets==5.1.0
     # via expert-extraction (pyproject.toml)
-debugpy==1.8.22
+debugpy==1.8.21
     # via ipykernel
 dill==0.4.1
     # via
@@ -49,7 +46,7 @@ dill==0.4.1
     #   multiprocess
 executing==2.2.1
     # via stack-data
-filelock==4.0.9
+filelock==3.32.5
     # via
     #   datasets
     #   huggingface-hub
@@ -60,7 +57,7 @@ frozenlist==1.8.0
     # via
     #   aiohttp
     #   aiosignal
-fsspec==2026.6.0
+fsspec==2026.7.0
     # via
     #   datasets
     #   huggingface-hub
@@ -72,9 +69,7 @@ hf-xet==1.6.0
 httpcore==1.0.9
     # via httpx
 httpx==0.28.1
-    # via
-    #   datasets
-    #   huggingface-hub
+    # via huggingface-hub
 huggingface-hub==1.33.0
     # via
     #   accelerate
@@ -82,13 +77,12 @@ huggingface-hub==1.33.0
     #   peft
     #   tokenizers
     #   transformers
-idna==3.20
+idna==3.19
     # via
     #   anyio
     #   httpx
-    #   requests
     #   yarl
-ipykernel==7.4.0
+ipykernel==7.3.0
     # via expert-extraction (pyproject.toml)
 ipython==9.17.1
     # via
@@ -133,7 +127,7 @@ multidict==6.9.1
     #   yarl
 multiprocess==0.70.19
     # via datasets
-nest-asyncio2==1.7.3
+nest-asyncio2==1.7.2
     # via ipykernel
 networkx==3.7
     # via torch
@@ -192,7 +186,7 @@ nvidia-nvshmem-cu13==3.4.5
     # via torch
 nvidia-nvtx==13.0.85
     # via cuda-toolkit
-onnx==1.23.1
+onnx==1.23.2
     # via
     #   expert-extraction (pyproject.toml)
     #   onnx-ir
@@ -224,7 +218,7 @@ pexpect==4.9.0
     # via ipython
 pillow==12.3.0
     # via torchvision
-platformdirs==4.12.2
+platformdirs==4.11.7
     # via jupyter-core
 prompt-toolkit==3.0.53
     # via ipython
@@ -239,11 +233,12 @@ protobuf==7.36.2
 psutil==7.2.2
     # via
     #   accelerate
+    #   ipykernel
     #   ipython
     #   peft
 ptyprocess==0.7.0
     # via pexpect
-pure-eval==0.2.4
+pure-eval==0.2.3
     # via stack-data
 pyarrow==25.0.1
     # via datasets
@@ -271,8 +266,6 @@ pyzmq==27.2.0
     #   jupyter-client
 regex==2026.9.29
     # via transformers
-requests==2.34.2
-    # via datasets
 rich==15.0.0
     # via typer
 safetensors==0.8.0
@@ -306,11 +299,11 @@ torchinfo==1.8.0
     # via expert-extraction (pyproject.toml)
 torchvision==0.29.1
     # via expert-extraction (pyproject.toml)
-tornado==6.5.10
+tornado==6.5.8
     # via
     #   ipykernel
     #   jupyter-client
-tqdm==4.70.1
+tqdm==4.70.0
     # via
     #   datasets
     #   huggingface-hub
@@ -324,13 +317,13 @@ traitlets==5.16.1
     #   jupyter-client
     #   jupyter-core
     #   matplotlib-inline
-transformers==5.18.0
+transformers==5.19.0
     # via
     #   expert-extraction (pyproject.toml)
     #   peft
 triton==3.8.0
     # via torch
-typer==0.27.2
+typer==0.27.3
     # via transformers
 typing-extensions==4.16.0
     # via
@@ -343,9 +336,7 @@ typing-extensions==4.16.0
     #   onnx-ir
     #   onnxscript
     #   torch
-urllib3==2.8.0
-    # via requests
-wcwidth==0.9.1
+wcwidth==0.8.3
     # via prompt-toolkit
 widgetsnbextension==4.0.16
     # via ipywidgets

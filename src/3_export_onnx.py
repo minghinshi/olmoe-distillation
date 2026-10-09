@@ -7,6 +7,8 @@ from transformers.exporters.exporter_onnx import OnnxExporter
 
 import utils
 
+utils.load_and_check_env()
+
 ONNX_MODEL_PATH = "../models/onnx_model/model.onnx"
 
 # %% Load the distilled model

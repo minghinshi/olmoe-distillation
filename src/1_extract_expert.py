@@ -3,7 +3,6 @@ import torch as t
 
 import utils
 
-# %% Load your Hugging Face token
 utils.load_and_check_env()
 
 # %% Install the model and load on the CPU

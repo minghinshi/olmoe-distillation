@@ -5,6 +5,8 @@ from tqdm import tqdm
 
 import utils
 
+utils.load_and_check_env()
+
 # %% Load the model
 model = utils.load_quantized_moe()
 

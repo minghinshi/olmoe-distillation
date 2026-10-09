@@ -13,6 +13,8 @@ from transformers import (
 
 import utils
 
+utils.load_and_check_env()
+
 # Target context window size of the student
 # Larger values give the student a longer context window
 # but requires more VRAM for distillation
@@ -25,9 +27,6 @@ T = 2.0
 REAL_RUN = False
 TRAINING_STEPS = 2000 if REAL_RUN else 10
 LOGGING_STEPS = 20 if REAL_RUN else 1
-
-# %% Load your Hugging Face token
-utils.load_and_check_env()
 
 # %% Load the teacher
 teacher = utils.load_quantized_moe()

@@ -1,7 +1,6 @@
 # %% Setup
 import utils
 
-# %% Load your Hugging Face token
 utils.load_and_check_env()
 
 # %% Load the three models to evaluate and the tokenizer

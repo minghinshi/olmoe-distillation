@@ -146,7 +146,7 @@ def load_dense_model_incomplete() -> DenseOlmoeForCausalLM:
     return DenseOlmoeForCausalLM.from_pretrained(MODEL_NAME)
 
 
-def load_dense_model() -> OlmoeForCausalLM:
+def load_dense_model() -> DenseOlmoeForCausalLM:
     """
     Loads a dense model produced by extracting an expert from the MoE.
     """
@@ -160,20 +160,13 @@ def load_distilled_model() -> PeftModelForCausalLM:
     """
     Loads the distilled model as a PEFT model.
     """
-    # Monkey-patch the MoE block with a dense MLP
-    register_patch_mapping(
-        mapping={
-            "OlmoeSparseMoeBlock": OlmoeMLP,
-        }
-    )
+    dense_model = load_dense_model()
 
-    model = AutoPeftModelForCausalLM.from_pretrained(
+    # Distilled model = Dense model + Adapters
+    return PeftModelForCausalLM.from_pretrained(
+        dense_model,
         FINAL_CHECKPOINT_DIR,
-        device_map="auto",
-    )
-
-    clear_patch_mapping()
-    return model
+    )  # type: ignore
 
 
 def load_tokenizer() -> GPTNeoXTokenizer:

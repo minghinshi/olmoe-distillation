@@ -24,7 +24,7 @@ CONTEXT_LEN = 2048
 T = 2.0
 
 # Whether we're doing the real multi-hour run or a test run
-REAL_RUN = False
+REAL_RUN = True
 TRAINING_STEPS = 2000 if REAL_RUN else 10
 LOGGING_STEPS = 20 if REAL_RUN else 1
 

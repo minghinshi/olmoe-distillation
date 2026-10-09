@@ -35,4 +35,4 @@ for i in range(len(sparse_model.model.layers)):
         mlp.down_proj.weight.copy_(down_proj)
 
 # %% Save the model for the next file
-dense_model.save_pretrained(utils.DENSE_MODEL_PATH)
+dense_model.save_pretrained(utils.DENSE_MODEL_DIR)

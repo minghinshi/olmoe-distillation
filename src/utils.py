@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 import torch as t
 import torch.nn.functional as F
@@ -24,8 +25,14 @@ from dense_model import DenseOlmoeForCausalLM
 MODEL_NAME = "allenai/OLMoE-1B-7B-0924-Instruct"
 DATASET_NAME = "allenai/tulu-v3.1-mix-preview-4096-OLMoE"
 
-DENSE_MODEL_PATH = "../models/dense_model"
-DISTILLED_MODEL_PATH = "../models/distilled_model/checkpoint-4000"
+PROJECT_DIR = Path(__file__).resolve().parent.parent
+MODELS_DIR = PROJECT_DIR / "models"
+
+DENSE_MODEL_DIR = MODELS_DIR / "dense_model"
+DISTILLED_MODEL_DIR = MODELS_DIR / "distilled_model"
+ONNX_MODEL_PATH = MODELS_DIR / "onnx_model" / "model.onnx"
+
+FINAL_CHECKPOINT_DIR = DISTILLED_MODEL_DIR / "checkpoint-2000"
 
 
 class OlmoeQuantizableMoeBlock(nn.Module):
@@ -144,7 +151,7 @@ def load_dense_model() -> OlmoeForCausalLM:
     Loads a dense model produced by extracting an expert from the MoE.
     """
     return DenseOlmoeForCausalLM.from_pretrained(
-        DENSE_MODEL_PATH,
+        DENSE_MODEL_DIR,
         device_map="cuda",
     )
 
@@ -161,7 +168,7 @@ def load_distilled_model() -> PeftModelForCausalLM:
     )
 
     model = AutoPeftModelForCausalLM.from_pretrained(
-        DISTILLED_MODEL_PATH,
+        FINAL_CHECKPOINT_DIR,
         device_map="auto",
     )
 

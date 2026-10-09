@@ -9,8 +9,6 @@ import utils
 
 utils.load_and_check_env()
 
-ONNX_MODEL_PATH = "../models/onnx_model/model.onnx"
-
 # %% Load the distilled model
 model = utils.load_distilled_model()
 print(model)
@@ -41,10 +39,10 @@ config = OnnxConfig(dynamic=True)
 onnx_program = exporter.export(merged_model, inputs, config=config)
 
 # %% Save the model
-onnx_program.save(ONNX_MODEL_PATH)
+onnx_program.save(utils.ONNX_MODEL_PATH)
 
 # %% Test drive the model
-session = ort.InferenceSession(ONNX_MODEL_PATH)
+session = ort.InferenceSession(utils.ONNX_MODEL_PATH)
 ort_inputs = {k: v.numpy() for k, v in inputs.items()}
 outputs = session.run(None, ort_inputs)
 

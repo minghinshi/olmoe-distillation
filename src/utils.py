@@ -2,6 +2,7 @@ import os
 
 import torch as t
 import torch.nn.functional as F
+from datasets import IterableDataset, load_dataset
 from dotenv import load_dotenv
 from peft import AutoPeftModelForCausalLM, PeftModelForCausalLM
 from torch import nn
@@ -21,6 +22,8 @@ from transformers.monkey_patching import clear_patch_mapping, register_patch_map
 from dense_model import DenseOlmoeForCausalLM
 
 MODEL_NAME = "allenai/OLMoE-1B-7B-0924-Instruct"
+DATASET_NAME = "allenai/tulu-v3.1-mix-preview-4096-OLMoE"
+
 DENSE_MODEL_PATH = "../models/dense_model"
 DISTILLED_MODEL_PATH = "../models/distilled_model/checkpoint-4000"
 
@@ -171,6 +174,13 @@ def load_tokenizer() -> GPTNeoXTokenizer:
     Loads OLMoE's tokenizer.
     """
     return AutoTokenizer.from_pretrained(MODEL_NAME)
+
+
+def load_sft_dataset() -> IterableDataset:
+    """
+    Loads the dataset used for supervised fine-tuning (SFT) of OLMoE.
+    """
+    return load_dataset(DATASET_NAME, split="train", streaming=True)
 
 
 def load_and_check_env():

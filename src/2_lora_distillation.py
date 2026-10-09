@@ -3,7 +3,6 @@
 
 # %% Setup
 import torch.nn.functional as F
-from datasets import load_dataset
 from peft import LoraConfig, TaskType, get_peft_model
 from torch import nn
 from transformers import (
@@ -72,12 +71,9 @@ student = get_peft_model(student, peft_config)
 # Confirm trainable params is small
 student.print_trainable_parameters()
 
+
 # %% Load and preprocess the dataset
 # We'll use the same dataset used for SFT of OLMoE
-DATASET_NAME = "allenai/tulu-v3.1-mix-preview-4096-OLMoE"
-dataset = load_dataset(DATASET_NAME, split="train", streaming=True)
-
-
 def tokenize(examples: dict[str, list]):
     return tokenizer.apply_chat_template(
         examples["messages"],
@@ -88,6 +84,7 @@ def tokenize(examples: dict[str, list]):
     )
 
 
+dataset = utils.load_sft_dataset()
 dataset = dataset.map(tokenize, batched=True)
 data_collator = DataCollatorForLanguageModeling(tokenizer, mlm=False)
 

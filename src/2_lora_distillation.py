@@ -2,8 +2,6 @@
 # https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/model-garden/lora-qlora
 
 # %% Setup
-from itertools import chain
-
 import torch.nn.functional as F
 from datasets import load_dataset
 from peft import LoraConfig, TaskType, get_peft_model
@@ -16,11 +14,18 @@ from transformers import (
 
 import utils
 
-# Number of tokens in each fine-tuning sample
-SEQ_LEN = 2048
+# Target context window size of the student
+# Larger values give the student a longer context window
+# but requires more VRAM for distillation
+CONTEXT_LEN = 2048
 
 # Knowledge distillation temperature
 T = 2.0
+
+# Whether we're doing the real multi-hour run or a test run
+REAL_RUN = False
+TRAINING_STEPS = 2000 if REAL_RUN else 10
+LOGGING_STEPS = 20 if REAL_RUN else 1
 
 # %% Load your Hugging Face token
 utils.load_and_check_env()
@@ -68,46 +73,22 @@ student = get_peft_model(student, peft_config)
 student.print_trainable_parameters()
 
 # %% Load and preprocess the dataset
-dataset = load_dataset("allenai/c4", "en", streaming=True, split="train")
-dataset = dataset.map(lambda x: tokenizer(x["text"]), batched=True)
+# We'll use the same dataset used for SFT of OLMoE
+DATASET_NAME = "allenai/tulu-v3.1-mix-preview-4096-OLMoE"
+dataset = load_dataset(DATASET_NAME, split="train", streaming=True)
 
 
-# For each batch of text, join all tokens into one big list
-# and split it into chunks of 2048 tokens
-def chunker(examples: dict[str, list]) -> dict[str, list]:
-    chunked_ids: list[list[int]] = [[0] * SEQ_LEN]
-    chunked_mask: list[list[int]] = [[0] * SEQ_LEN]
-    token_idx = 0
-
-    input_ids = chain.from_iterable(examples["input_ids"])
-    attention_mask = chain.from_iterable(examples["attention_mask"])
-
-    # Iterate over all tokens in all examples
-    # TODO: Add end-of-text token between text
-    for id, mask in zip(input_ids, attention_mask):
-        chunked_ids[-1][token_idx] = id
-        chunked_mask[-1][token_idx] = mask
-        token_idx += 1
-
-        # When chunk is full, add a new one
-        if token_idx == SEQ_LEN:
-            chunked_ids.append([0] * SEQ_LEN)
-            chunked_mask.append([0] * SEQ_LEN)
-            token_idx = 0
-
-    # Drop the non-full chunk
-    chunked_ids.pop()
-    chunked_mask.pop()
-    return {"input_ids": chunked_ids, "attention_mask": chunked_mask}
+def tokenize(examples: dict[str, list]):
+    return tokenizer.apply_chat_template(
+        examples["messages"],
+        add_generation_prompt=False,
+        padding=True,
+        truncation=True,
+        max_length=CONTEXT_LEN,
+    )
 
 
-dataset = dataset.map(
-    chunker,
-    batched=True,
-    remove_columns=["text", "timestamp", "url"],
-)
-
-# %% Create a data collator
+dataset = dataset.map(tokenize, batched=True)
 data_collator = DataCollatorForLanguageModeling(tokenizer, mlm=False)
 
 
@@ -146,13 +127,13 @@ training_args = TrainingArguments(
     output_dir="../models/distilled_model",
     per_device_train_batch_size=2,
     num_train_epochs=1,
-    max_steps=500,
+    max_steps=TRAINING_STEPS,
     learning_rate=2e-4,
     gradient_accumulation_steps=8,
     # Requires Ampere or newer GPUs
     bf16=True,
     gradient_checkpointing=True,
-    logging_steps=4,
+    logging_steps=LOGGING_STEPS,
 )
 
 trainer = DistillationTrainer(
@@ -165,12 +146,3 @@ trainer = DistillationTrainer(
 
 # %% Time to train!
 trainer.train()
-
-# Observations:
-
-# The initial training loss is around 100.
-# If we print the loss in `compute_loss`, we get around 10-15.
-# `vocab_size` is about 50000 and ln(50000) is about 10.8,
-# so the dense model is at first performing no better than random.
-
-# Extracting expert 0 or averaging expert weights gave similar initial loss.

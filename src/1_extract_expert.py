@@ -18,7 +18,7 @@ print(dense_model)
 
 # %% Extract experts
 for i in range(len(sparse_model.model.layers)):
-    # Get weights from expert 0
+    # Get weights from most frequently used expert
     experts = sparse_model.model.layers[i].mlp.experts
     expert_idx = EXPERT_IDS[i]
 

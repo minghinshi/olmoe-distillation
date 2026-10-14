@@ -5,7 +5,7 @@ import torch as t
 import torch.nn.functional as F
 from datasets import IterableDataset, load_dataset
 from dotenv import load_dotenv
-from peft import AutoPeftModelForCausalLM, PeftModelForCausalLM
+from peft import PeftModelForCausalLM
 from torch import nn
 from transformers import (
     AutoModelForCausalLM,

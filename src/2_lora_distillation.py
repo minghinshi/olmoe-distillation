@@ -80,6 +80,7 @@ def tokenize(examples: dict[str, list]):
         padding=True,
         truncation=True,
         max_length=CONTEXT_LEN,
+        return_assistant_tokens_mask=True,
     )
 
 

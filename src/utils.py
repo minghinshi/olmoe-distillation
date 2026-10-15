@@ -31,6 +31,7 @@ MODELS_DIR = PROJECT_DIR / "models"
 DENSE_MODEL_DIR = MODELS_DIR / "dense_model"
 DISTILLED_MODEL_DIR = MODELS_DIR / "distilled_model"
 ONNX_MODEL_PATH = MODELS_DIR / "onnx_model" / "model.onnx"
+TOKENIZER_PATH = MODELS_DIR / "tokenizer"
 
 FINAL_CHECKPOINT_DIR = DISTILLED_MODEL_DIR / "checkpoint-2000"
 
@@ -169,11 +170,19 @@ def load_distilled_model() -> PeftModelForCausalLM:
     )  # type: ignore
 
 
+def save_tokenizer():
+    """
+    Downloads OLMoE's tokenizer and saves it in the project at `models/tokenizer/`.
+    """
+    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+    tokenizer.save_pretrained(TOKENIZER_PATH)
+
+
 def load_tokenizer() -> GPTNeoXTokenizer:
     """
     Loads OLMoE's tokenizer.
     """
-    return AutoTokenizer.from_pretrained(MODEL_NAME)
+    return AutoTokenizer.from_pretrained(TOKENIZER_PATH)
 
 
 def load_sft_dataset() -> IterableDataset:

@@ -13,8 +13,11 @@ sparse_model = utils.load_olmoe()
 print(sparse_model)
 
 # %% Load a dense model with MLP weights not set
-dense_model = utils.load_dense_model_incomplete()
+dense_model = utils.create_dense_model()
 print(dense_model)
+
+# %% Load weights of matching modules from MoE to dense model
+dense_model.load_state_dict(sparse_model.state_dict(), strict=False)
 
 # %% Extract experts
 for i in range(len(sparse_model.model.layers)):

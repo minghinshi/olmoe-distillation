@@ -20,7 +20,7 @@ from transformers.models.gpt_neox.tokenization_gpt_neox import GPTNeoXTokenizer
 from transformers.models.olmoe.modeling_olmoe import OlmoeMLP, OlmoeTopKRouter
 from transformers.monkey_patching import clear_patch_mapping, register_patch_mapping
 
-from dense_model import DenseOlmoeForCausalLM
+from dense_model import DenseOlmoeConfig, DenseOlmoeForCausalLM
 
 MODEL_NAME = "allenai/OLMoE-1B-7B-0924-Instruct"
 DATASET_NAME = "allenai/tulu-v3.1-mix-preview-4096-OLMoE"
@@ -138,13 +138,15 @@ def load_quantized_moe() -> OlmoeForCausalLM:
     return model
 
 
-def load_dense_model_incomplete() -> DenseOlmoeForCausalLM:
+def create_dense_model() -> DenseOlmoeForCausalLM:
     """
-    Loads a dense model with attention weights from OLMoE but MLP weights not set.
+    Creates a dense model with uninitialized weights.
 
-    Note: This will generate a warning from `transformers` that can be safely ignored.
+    The dense model's architecture is created by replacing
+    each expert block in OLMoE with an MLP the size of one expert.
     """
-    return DenseOlmoeForCausalLM.from_pretrained(MODEL_NAME)
+    config = DenseOlmoeConfig()
+    return DenseOlmoeForCausalLM(config)
 
 
 def load_dense_model() -> DenseOlmoeForCausalLM:

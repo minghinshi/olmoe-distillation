@@ -14,5 +14,6 @@ dependencies = [
     "torch",
     "torchinfo",
     "torchvision",
-    "transformers[torch]"
+    "transformers[torch]",
+    "trl",
 ]

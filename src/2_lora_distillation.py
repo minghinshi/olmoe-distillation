@@ -1,36 +1,25 @@
-# LoRA vs. QLoRA comparison:
-# https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/model-garden/lora-qlora
-
 # %% Setup
+import torch as t
 import torch.nn.functional as F
-from peft import LoraConfig, TaskType, get_peft_model
+from peft import LoraConfig, TaskType
 from torch import nn
-from transformers import (
-    DataCollatorForLanguageModeling,
-    Trainer,
-    TrainingArguments,
-)
+from trl.trainer.sft_config import SFTConfig
+from trl.trainer.sft_trainer import SFTTrainer
 
 import utils
 
 utils.load_and_check_env()
 
-# Target context window size of the student
-# Larger values give the student a longer context window
-# but requires more VRAM for distillation
-CONTEXT_LEN = 2048
-
 # Knowledge distillation temperature
 T = 2.0
 
 # Whether we're doing the real multi-hour run or a test run
-REAL_RUN = True
-TRAINING_STEPS = 2000 if REAL_RUN else 10
-LOGGING_STEPS = 20 if REAL_RUN else 1
+DEBUG = True
+TRAINING_STEPS = 10 if DEBUG else 2000
+LOGGING_STEPS = 1 if DEBUG else 20
 
 # %% Load the teacher
 teacher = utils.load_quantized_moe()
-print(teacher)
 
 # %% Freeze the teacher and switch to eval mode
 teacher.eval()
@@ -39,15 +28,74 @@ for param in teacher.parameters():
 
 # %% Load the student
 student = utils.load_dense_model()
-print(student)
 
 # %% Load the tokenizer
 tokenizer = utils.load_tokenizer()
 
-# %% Set up low-rank adaptation (LoRA)
-# https://huggingface.co/docs/peft/quicktour
-# We're using one GPU, so DeepSpeed (for distributed training) can be ignored
-# TODO: Investigate how to optimize the LoRA config
+# %% Load the dataset
+# We'll use the same dataset used for SFT of OLMoE
+dataset = utils.load_sft_dataset()
+
+
+# %% Create a trainer
+class SFTDistillationTrainer(SFTTrainer):
+    def __init__(self, teacher: nn.Module, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.teacher = teacher
+
+    def compute_loss(
+        self,
+        model: nn.Module,
+        inputs: dict,
+        return_outputs=False,
+        num_items_in_batch=None,
+    ) -> t.Tensor:
+
+        # Mask of trainable tokens
+        mask: t.Tensor = inputs["labels"][:, 1:] != -100
+
+        # Remove labels in model input
+        # so that they don't compute loss by themselves
+        real_input = inputs.copy()
+        del real_input["labels"]
+
+        # Number of tokens in this gradient accumulation window
+        # Clamped to 1 to avoid division by zero
+        n_tokens = mask.sum() if num_items_in_batch is None else num_items_in_batch
+        n_tokens = t.as_tensor(n_tokens).clamp(min=1)
+
+        # Student forward pass
+        student_output = model(**real_input)
+        student_logits: t.Tensor = student_output.logits[:, :-1][mask]
+
+        # Teacher forward pass
+        with t.no_grad():
+            teacher_logits: t.Tensor = self.teacher(**real_input).logits[:, :-1][mask]
+
+        # KL-divergence loss
+        # Use temperature > 1 for better performance
+        kl_loss = F.kl_div(
+            F.log_softmax(student_logits / T, dim=-1),
+            F.log_softmax(teacher_logits / T, dim=-1),
+            reduction="sum",
+            log_target=True,
+        )
+        kl_loss = kl_loss * T * T / n_tokens
+
+        # Cross-entropy loss
+        labels: t.Tensor = inputs["labels"][:, 1:][mask]
+        logprobs = F.log_softmax(student_logits, dim=-1)
+        label_logprobs = logprobs.gather(-1, labels.unsqueeze(-1))
+        ce_loss = -label_logprobs.sum() / n_tokens
+
+        if DEBUG:
+            print(f"KL: {kl_loss:.3f}, CE: {ce_loss:.3f}")
+
+        return kl_loss + ce_loss
+
+
+# Training configuration from the following guide:
+# https://unsloth.ai/docs/get-started/fine-tuning-llms-guide/lora-hyperparameters-guide
 peft_config = LoraConfig(
     task_type=TaskType.CAUSAL_LM,
     inference_mode=False,
@@ -65,80 +113,27 @@ peft_config = LoraConfig(
     lora_dropout=0,
 )
 
-student = get_peft_model(student, peft_config)
-
-# Confirm trainable params is small
-student.print_trainable_parameters()
-
-
-# %% Load and preprocess the dataset
-# We'll use the same dataset used for SFT of OLMoE
-def tokenize(examples: dict[str, list]):
-    return tokenizer.apply_chat_template(
-        examples["messages"],
-        add_generation_prompt=False,
-        padding=True,
-        truncation=True,
-        max_length=CONTEXT_LEN,
-        return_assistant_tokens_mask=True,
-    )
-
-
-dataset = utils.load_sft_dataset()
-dataset = dataset.map(tokenize, batched=True)
-data_collator = DataCollatorForLanguageModeling(tokenizer, mlm=False)
-
-
-# %% Create a trainer
-class DistillationTrainer(Trainer):
-    def __init__(self, teacher: nn.Module, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.teacher = teacher
-
-    def compute_loss(
-        self, model, inputs, return_outputs=False, num_items_in_batch=None
-    ):
-        # Forward passes
-        student_output = model(**inputs)
-        student_logits = student_output.logits
-        teacher_logits = self.teacher(**inputs).logits
-
-        # Compute loss (KL divergence)
-        # Use temperature > 1 for better performance
-        student_logprobs = F.log_softmax(student_logits / T, dim=-1)
-        teacher_logprobs = F.log_softmax(teacher_logits / T, dim=-1)
-        vocab_size = student_logprobs.shape[-1]
-
-        loss = F.kl_div(
-            student_logprobs.view(-1, vocab_size),
-            teacher_logprobs.view(-1, vocab_size),
-            reduction="batchmean",
-            log_target=True,
-        ) * (T * T)
-
-        return (loss, student_output) if return_outputs else loss
-
-
-# https://unsloth.ai/docs/get-started/fine-tuning-llms-guide/lora-hyperparameters-guide
-training_args = TrainingArguments(
+training_args = SFTConfig(
     output_dir=str(utils.DISTILLED_MODEL_DIR),
-    per_device_train_batch_size=2,
+    per_device_train_batch_size=4,
     num_train_epochs=1,
     max_steps=TRAINING_STEPS,
     learning_rate=2e-4,
-    gradient_accumulation_steps=8,
+    gradient_accumulation_steps=4,
     # Requires Ampere or newer GPUs
     bf16=True,
     gradient_checkpointing=True,
     logging_steps=LOGGING_STEPS,
+    assistant_only_loss=True,
 )
 
-trainer = DistillationTrainer(
+trainer = SFTDistillationTrainer(
     teacher=teacher,
     model=student,
     args=training_args,
-    data_collator=data_collator,
     train_dataset=dataset,
+    processing_class=tokenizer,
+    peft_config=peft_config,
 )
 
 # %% Time to train!

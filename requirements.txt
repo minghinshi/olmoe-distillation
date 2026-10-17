@@ -4,6 +4,7 @@ accelerate==1.15.0
     # via
     #   peft
     #   transformers
+    #   trl
 aiohappyeyeballs==2.7.1
     # via aiohttp
 aiohttp==3.14.4
@@ -37,7 +38,9 @@ cuda-pathfinder==1.8.3
 cuda-toolkit==13.0.3.0
     # via torch
 datasets==5.1.0
-    # via expert-extraction (pyproject.toml)
+    # via
+    #   expert-extraction (pyproject.toml)
+    #   trl
 debugpy==1.8.21
     # via ipykernel
 dill==0.4.1
@@ -95,7 +98,9 @@ ipywidgets==8.1.9
 jedi==0.20.0
     # via ipython
 jinja2==3.1.6
-    # via torch
+    # via
+    #   torch
+    #   trl
 jupyter-client==8.10.0
     # via ipykernel
 jupyter-core==5.9.1
@@ -208,6 +213,7 @@ packaging==26.3
     #   onnxscript
     #   peft
     #   transformers
+    #   trl
 pandas==3.0.6
     # via datasets
 parso==0.8.7
@@ -321,8 +327,11 @@ transformers==5.19.0
     # via
     #   expert-extraction (pyproject.toml)
     #   peft
+    #   trl
 triton==3.8.0
     # via torch
+trl==1.15.0
+    # via expert-extraction (pyproject.toml)
 typer==0.27.3
     # via transformers
 typing-extensions==4.16.0

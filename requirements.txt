@@ -47,6 +47,8 @@ dill==0.4.1
     # via
     #   datasets
     #   multiprocess
+einops==0.8.2
+    # via expert-extraction (pyproject.toml)
 executing==2.2.1
     # via stack-data
 filelock==3.32.5

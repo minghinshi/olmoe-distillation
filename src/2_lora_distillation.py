@@ -1,7 +1,7 @@
 # %% Setup
 import torch as t
 import torch.nn.functional as F
-from peft import LoraConfig, TaskType
+from peft import LoraConfig, TaskType, get_peft_model
 from torch import nn
 from trl.trainer.sft_config import SFTConfig
 from trl.trainer.sft_trainer import SFTTrainer
@@ -28,6 +28,29 @@ for param in teacher.parameters():
 
 # %% Load the student
 student = utils.load_dense_model()
+
+# %% Attach LoRA adapters to student
+# Training configuration from the following guide:
+# https://unsloth.ai/docs/get-started/fine-tuning-llms-guide/lora-hyperparameters-guide
+peft_config = LoraConfig(
+    task_type=TaskType.CAUSAL_LM,
+    inference_mode=False,
+    r=16,
+    target_modules=[
+        "self_attn.q_proj",
+        "self_attn.k_proj",
+        "self_attn.v_proj",
+        "self_attn.o_proj",
+        "mlp.gate_proj",
+        "mlp.up_proj",
+        "mlp.down_proj",
+    ],
+    lora_alpha=32,
+    lora_dropout=0,
+)
+
+peft_student = get_peft_model(student, peft_config)
+peft_student.print_trainable_parameters()
 
 # %% Load the tokenizer
 tokenizer = utils.load_tokenizer()
@@ -94,32 +117,13 @@ class SFTDistillationTrainer(SFTTrainer):
         return kl_loss + ce_loss
 
 
-# Training configuration from the following guide:
-# https://unsloth.ai/docs/get-started/fine-tuning-llms-guide/lora-hyperparameters-guide
-peft_config = LoraConfig(
-    task_type=TaskType.CAUSAL_LM,
-    inference_mode=False,
-    r=16,
-    target_modules=[
-        "self_attn.q_proj",
-        "self_attn.k_proj",
-        "self_attn.v_proj",
-        "self_attn.o_proj",
-        "mlp.gate_proj",
-        "mlp.up_proj",
-        "mlp.down_proj",
-    ],
-    lora_alpha=32,
-    lora_dropout=0,
-)
-
 training_args = SFTConfig(
     output_dir=str(utils.DISTILLED_MODEL_DIR),
-    per_device_train_batch_size=4,
+    per_device_train_batch_size=2,
     num_train_epochs=1,
     max_steps=TRAINING_STEPS,
     learning_rate=2e-4,
-    gradient_accumulation_steps=4,
+    gradient_accumulation_steps=8,
     # Requires Ampere or newer GPUs
     bf16=True,
     gradient_checkpointing=True,
@@ -129,11 +133,10 @@ training_args = SFTConfig(
 
 trainer = SFTDistillationTrainer(
     teacher=teacher,
-    model=student,
+    model=peft_student,
     args=training_args,
     train_dataset=dataset,
     processing_class=tokenizer,
-    peft_config=peft_config,
 )
 
 # %% Time to train!

@@ -46,9 +46,7 @@ class DenseOlmoeConfig(PreTrainedConfig):
 
     vocab_size: int = 50304
     hidden_size: int = 2048
-    # `OlmoeConfig` has `intermediate_size` 2048 by default
-    # This is a bug, it should be 1024
-    intermediate_size: int = 1024
+    intermediate_size: int = 8192
     num_hidden_layers: int = 16
     num_attention_heads: int = 16
     num_key_value_heads: int | None = None

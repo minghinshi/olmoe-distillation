@@ -14,8 +14,8 @@ utils.load_and_check_env()
 T = 2.0
 
 # Whether we're doing the real multi-hour run or a test run
-DEBUG = True
-TRAINING_STEPS = 10 if DEBUG else 2000
+DEBUG = False
+TRAINING_STEPS = 10 if DEBUG else 5000
 LOGGING_STEPS = 1 if DEBUG else 20
 
 # %% Load the teacher

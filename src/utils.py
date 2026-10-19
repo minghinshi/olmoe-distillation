@@ -33,7 +33,7 @@ DISTILLED_MODEL_DIR = MODELS_DIR / "distilled_model"
 ONNX_MODEL_PATH = MODELS_DIR / "onnx_model" / "model.onnx"
 TOKENIZER_PATH = MODELS_DIR / "tokenizer"
 
-FINAL_CHECKPOINT_DIR = DISTILLED_MODEL_DIR / "checkpoint-2000"
+FINAL_CHECKPOINT_DIR = DISTILLED_MODEL_DIR / "checkpoint-5000"
 
 
 class OlmoeQuantizableMoeBlock(nn.Module):

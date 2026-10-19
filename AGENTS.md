@@ -9,7 +9,7 @@ This project aims to distill OLMoE, a mixture-of-experts model, into a dense ver
 3. Export the dense OLMoE in ONNX format.
 4. Evaluate the original and dense OLMoE on benchmarks and compare.
 
-Status: Steps up to step 3 are completed, but the dense model fails to produce a coherent response.
+Status: Steps up to step 3 are completed.
 
 ## Targets
 

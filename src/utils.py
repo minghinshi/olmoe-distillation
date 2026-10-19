@@ -8,14 +8,16 @@ from dotenv import load_dotenv
 from peft import PeftModelForCausalLM
 from torch import nn
 from transformers import (
-    AutoModelForCausalLM,
     AutoTokenizer,
     BatchEncoding,
     BitsAndBytesConfig,
     OlmoeConfig,
     OlmoeForCausalLM,
 )
-from transformers.conversion_mapping import register_checkpoint_conversion_mapping
+from transformers.conversion_mapping import (
+    get_checkpoint_conversion_mapping,
+    register_checkpoint_conversion_mapping,
+)
 from transformers.models.gpt_neox.tokenization_gpt_neox import GPTNeoXTokenizer
 from transformers.models.olmoe.modeling_olmoe import OlmoeMLP, OlmoeTopKRouter
 from transformers.monkey_patching import clear_patch_mapping, register_patch_mapping
@@ -34,6 +36,10 @@ ONNX_MODEL_PATH = MODELS_DIR / "onnx_model" / "model.onnx"
 TOKENIZER_PATH = MODELS_DIR / "tokenizer"
 
 FINAL_CHECKPOINT_DIR = DISTILLED_MODEL_DIR / "checkpoint-5000"
+
+# OLMoE uses Qwen 2's conversion mapping
+# Save it here so that we can restore it in `undo_quantization_patch()`
+olmoe_mapping = get_checkpoint_conversion_mapping("qwen2_moe")
 
 
 class OlmoeQuantizableMoeBlock(nn.Module):
@@ -99,9 +105,9 @@ def load_olmoe() -> OlmoeForCausalLM:
     )
 
 
-def load_quantized_moe() -> OlmoeForCausalLM:
+def apply_quantization_patch():
     """
-    Loads OLMoE, replaces its expert modules with a version using `ModuleList`, and quantizes it in 4-bit.
+    Applies a patch that makes OLMoE's experts quantizable.
     """
     # Monkey-patch the MoE block with a custom, quantizable version
     register_patch_mapping(
@@ -118,23 +124,46 @@ def load_quantized_moe() -> OlmoeForCausalLM:
         model_type_or_class_name="olmoe", mapping=[], overwrite=True
     )
 
-    quantization_config = BitsAndBytesConfig(
+
+def undo_quantization_patch():
+    """
+    Undoes the effects of `apply_quantization_patch()`.
+    """
+    clear_patch_mapping()
+
+    assert olmoe_mapping is not None
+    register_checkpoint_conversion_mapping(
+        model_type_or_class_name="olmoe", mapping=olmoe_mapping, overwrite=True
+    )
+
+
+def get_4bit_config() -> BitsAndBytesConfig:
+    """
+    Returns a `BitsAndBytesConfig` for quantizing a model to 4-bit.
+    """
+    return BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_compute_dtype=t.bfloat16,
         bnb_4bit_quant_type="nf4",
         bnb_4bit_use_double_quant=True,
     )
 
+
+def load_quantized_moe() -> OlmoeForCausalLM:
+    """
+    Loads OLMoE, replaces its expert modules with a version using `ModuleList`, and quantizes it in 4-bit.
+    """
+    apply_quantization_patch()
+
     # Now we only use 7 GB instead of 14 GB!
-    model = AutoModelForCausalLM.from_pretrained(
+    model = OlmoeForCausalLM.from_pretrained(
         MODEL_NAME,
         device_map="auto",
-        quantization_config=quantization_config,
+        quantization_config=get_4bit_config(),
     )
 
     # Clean up
-    clear_patch_mapping()
-    assert isinstance(model, OlmoeForCausalLM)
+    undo_quantization_patch()
     return model
 
 
@@ -206,7 +235,7 @@ def load_and_check_env():
 
 def test_drive(model, tokenizer):
     """
-    Sends an LLM "Who are you?" and prints its response.
+    Sends an LLM "Who are you?" and prints its response (max 40 tokens).
     """
     messages = [
         {

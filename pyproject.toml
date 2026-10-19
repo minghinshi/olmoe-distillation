@@ -5,6 +5,8 @@ dependencies = [
     "bitsandbytes",
     "datasets",
     "einops",
+    "inspect-ai",
+    "inspect-evals",
     "ipykernel",
     "ipywidgets",
     "onnx",
